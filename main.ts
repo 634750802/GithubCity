@@ -14,23 +14,31 @@ import {
 } from "./scene";
 
 // Get HTML elements
-const autoRotateButton = document.getElementById("autorotate");
-const downloadButton = document.getElementById("download");
-const yearSelect = document.getElementById("yearSelect");
-const usernameInput = document.getElementById("usernameInput");
-const infoForm = document.getElementById("infoForm");
-const selectionScreen = document.getElementById("selectionScreen");
-const titleLink = document.getElementById("title");
-const displayInfo = document.getElementById("displayInfo");
-const errorMessage = document.getElementById("errorMessage");
-const shadowPreset = document.getElementById("shadowPreset");
+const autoRotateButton = <HTMLButtonElement>(
+    document.getElementById("autorotate")
+);
+const downloadButton = <HTMLButtonElement>document.getElementById("download");
+const yearSelect = <HTMLSelectElement>document.getElementById("yearSelect");
+const usernameInput = <HTMLInputElement>(
+    document.getElementById("usernameInput")
+);
+const infoForm = <HTMLFormElement>document.getElementById("infoForm");
+const selectionScreen = <HTMLSelectElement>(
+    document.getElementById("selectionScreen")
+);
+const titleLink = <HTMLAnchorElement>document.getElementById("title");
+const displayInfo = <HTMLDivElement>document.getElementById("displayInfo");
+const errorMessage = <HTMLParagraphElement>(
+    document.getElementById("errorMessage")
+);
+const shadowPreset = <HTMLInputElement>document.getElementById("shadowPreset");
 
 // Populate year select with years down to 2008
 const currentYear = new Date().getFullYear();
 for (let y = currentYear; y >= 2008; y--) {
     const option = document.createElement("option");
-    option.value = y;
-    option.innerHTML = y;
+    option.value = String(y);
+    option.innerHTML = String(y);
     yearSelect.appendChild(option);
 }
 
@@ -43,11 +51,11 @@ const renderShiftZ = 0.38;
 let enteredInfo = false;
 
 const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.get("name") && urlParams.get("year")) {
+const name = urlParams.get("name");
+const year = urlParams.get("year");
+if (name && year) {
     // Generate city with url params
     enteredInfo = true;
-    const name = urlParams.get("name");
-    const year = urlParams.get("year");
     generateCityFromParams(name, year);
 } else {
     // Placeholder city
@@ -96,7 +104,7 @@ shadowPreset.onchange = () => {
     changeShadowPreset(scene, shadowPreset.value);
 };
 
-async function generateCityFromParams(name, year) {
+async function generateCityFromParams(name: string, year: string) {
     // Get data from API
     const apiContribs = await fetchContributions(name, year);
     if (apiContribs == null) {
@@ -122,7 +130,7 @@ async function generateCityFromParams(name, year) {
 }
 
 // Get the 2D array containing contributions and make stuff happen
-function generateCity(contribs) {
+function generateCity(contribs: number[][]) {
     // Reset city
     clearScene(scene);
 
@@ -142,10 +150,10 @@ function generateCity(contribs) {
                 renderGrass(x, 0, z, scene);
             } else if (tileType.tile === 1) {
                 // Render road tiles
-                renderRoad(x, -0.015, z, tileTypes[i][j], scene);
+                renderRoad(x, -0.015, z, tileType, scene);
             } else if (tileType.tile === 2) {
                 // Render building tiles
-                renderBuilding(x, 2 * renderShiftZ, z, tileTypes[i][j], scene);
+                renderBuilding(x, 2 * renderShiftZ, z, tileType, scene);
             }
         }
     }

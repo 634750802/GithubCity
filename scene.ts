@@ -4,10 +4,12 @@
 
 import { EffectComposer, RenderPass } from "postprocessing";
 import * as THREE from "three";
+import { Light } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { STLExporter } from "three/examples/jsm/exporters/STLExporter";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
+import { BuildingTileType, RoadTileType } from "./algo";
 import {
     ENVIRONMENT_ANIMATED_ASSET,
     ENVIRONMENT_ASSET,
@@ -58,7 +60,7 @@ export function createScene() {
     return { scene, controls };
 }
 
-export function clearScene(scene) {
+export function clearScene(scene: THREE.Scene) {
     const toDelete = ["Building", "Road", "Grass", "Tree"];
     for (let i = scene.children.length - 1; i >= 0; i--) {
         if (toDelete.includes(scene.children[i].name))
@@ -66,27 +68,30 @@ export function clearScene(scene) {
     }
 }
 
-export function changeShadowPreset(scene, preset) {
-    for (const child of scene.children) {
+export function changeShadowPreset(
+    scene: THREE.Scene,
+    preset: string | number,
+) {
+    for (const child of <Light[]>scene.children) {
         if (child.type === "DirectionalLight") {
             if (typeof preset === "string") preset = parseInt(preset);
             if (preset === 1) {
                 child.shadow.mapSize.x = 768;
                 child.shadow.mapSize.y = 768;
                 child.shadow.map.dispose();
-                child.shadow.map = null;
+                child.shadow.map = <any>null;
             } else if (preset === 2) {
                 child.shadow.mapSize.x = 2048;
                 child.shadow.mapSize.y = 2048;
                 child.shadow.map.dispose();
-                child.shadow.map = null;
+                child.shadow.map = <any>null;
             }
         }
     }
 }
 
 // Set shadows on given object to given settings
-function setShadow(obj, cast = false, receive = false) {
+function setShadow(obj: THREE.Object3D, cast = false, receive = false) {
     obj.castShadow = cast;
     obj.receiveShadow = receive;
     if (obj?.children != null) {
@@ -96,15 +101,21 @@ function setShadow(obj, cast = false, receive = false) {
     }
 }
 
-export function renderBuilding(x, y, z, building, scene) {
+export function renderBuilding(
+    x: number,
+    y: number,
+    z: number,
+    building: BuildingTileType,
+    scene: THREE.Scene,
+) {
     const height = Math.min(building.value, 35); // Cap height
     for (let i = 0; i < height; i++) {
         let assetToLoad = "";
         if (i === 0)
             assetToLoad = building.building.groundUrl; // Load ground tile
         else if (i === height - 1)
-            assetToLoad = building.building.roofUrl; // Load roof tile
-        else assetToLoad = building.building.floorUrl; // Load floor tile
+            assetToLoad = <string>building.building.roofUrl; // Load roof tile
+        else assetToLoad = <string>building.building.floorUrl; // Load floor tile
         if (assetToLoad == null || assetToLoad === "") return;
 
         loader.load(
@@ -131,7 +142,7 @@ export function renderBuilding(x, y, z, building, scene) {
                 gltf.scene.position.x = x + extraShiftX;
                 gltf.scene.position.z = z + extraShiftZ;
 
-                gltf.scene.rotation.y = THREE.Math.degToRad(
+                gltf.scene.rotation.y = THREE.MathUtils.degToRad(
                     -90 * (building.dir + (isLShaped ? 2 : 0)) - extraAngle,
                 );
 
@@ -145,7 +156,13 @@ export function renderBuilding(x, y, z, building, scene) {
     }
 }
 
-export function renderRoad(x, y, z, road, scene) {
+export function renderRoad(
+    x: number,
+    y: number,
+    z: number,
+    road: RoadTileType,
+    scene: THREE.Scene,
+) {
     let assetToLoad = "";
     if (road.type === 0) assetToLoad = ROAD_TYPES[0]; // 2 way road
     else if (road.type === 1) assetToLoad = ROAD_TYPES[1]; // 3 way road
@@ -159,7 +176,7 @@ export function renderRoad(x, y, z, road, scene) {
             gltf.scene.position.y = y;
             gltf.scene.position.x = x;
             gltf.scene.position.z = z;
-            gltf.scene.rotation.y = THREE.Math.degToRad(-90 * road.dir);
+            gltf.scene.rotation.y = THREE.MathUtils.degToRad(-90 * road.dir);
 
             setShadow(gltf.scene, false, true);
 
@@ -173,7 +190,12 @@ export function renderRoad(x, y, z, road, scene) {
     );
 }
 
-export function renderGrass(x, y, z, scene) {
+export function renderGrass(
+    x: number,
+    y: number,
+    z: number,
+    scene: THREE.Scene,
+) {
     const assetToLoad = GRASS_ASSET;
 
     loader.load(
@@ -215,7 +237,7 @@ export function renderGrass(x, y, z, scene) {
 }
 
 // Convert given scene into STL blob
-export function convertSceneToStlBlob(scene) {
+export function convertSceneToStlBlob(scene: THREE.Scene) {
     const exporter = new STLExporter();
     const str = exporter.parse(scene);
     return new Blob([str], { type: "text/plain" });
@@ -235,12 +257,12 @@ function createCamera() {
 }
 
 // Create and configure renderer and return it
-function createRenderer(scene, camera) {
+function createRenderer(scene: THREE.Scene, camera: THREE.Camera) {
     const renderer = new THREE.WebGLRenderer({
         powerPreference: "high-performance",
         antialias: true,
         depth: true,
-        canvas: document.querySelector("#bg"),
+        canvas: <HTMLCanvasElement>document.querySelector("#bg"),
     });
 
     resizeRenderer(renderer);
@@ -254,13 +276,13 @@ function createRenderer(scene, camera) {
 }
 
 // Set's the renderers size to current window size
-function resizeRenderer(renderer) {
+function resizeRenderer(renderer: THREE.WebGLRenderer) {
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
 // Create and configure controls and return it
-function createControls(camera, renderer) {
+function createControls(camera: THREE.Camera, renderer: THREE.WebGLRenderer) {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.autoRotate = true;
     controls.autoRotateSpeed = -1;
@@ -274,7 +296,11 @@ function createControls(camera, renderer) {
 }
 
 // Configure postprocessing and return composer
-function setupPostProcessing(scene, camera, renderer) {
+function setupPostProcessing(
+    scene: THREE.Scene,
+    camera: THREE.Camera,
+    renderer: THREE.Renderer,
+) {
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
 
@@ -282,7 +308,7 @@ function setupPostProcessing(scene, camera, renderer) {
 }
 
 // Create and configure lighting in the scene
-function setupLighting(scene) {
+function setupLighting(scene: THREE.Scene) {
     // Ambient lighting
     const ambientLight = new THREE.AmbientLight(0x9ad0ec, 0.7);
     // const ambientLight = new THREE.AmbientLight(0x9AD0EC, 1);
@@ -304,7 +330,7 @@ function setupLighting(scene) {
 }
 
 // Create and setup anything environment-related
-function setupEnvironment(scene) {
+function setupEnvironment(scene: THREE.Scene) {
     const sceneBackground = new THREE.Color(0x9ad0ec);
     scene.background = sceneBackground;
 
@@ -313,7 +339,7 @@ function setupEnvironment(scene) {
     // Render environment (ground)
     loader.load(`./assets/${ENVIRONMENT_ASSET}`, function (gltf) {
         const env = gltf.scene;
-        env.position.set(...position);
+        env.position.set(position.x, position.y, position.z);
         setShadow(gltf.scene, false, true);
         scene.add(env);
     });
@@ -321,20 +347,20 @@ function setupEnvironment(scene) {
     // Render environment (objects and other stuff)
     loader.load(`./assets/${ENVIRONMENT_OBJECTS_ASSET}`, function (gltf) {
         const envObjects = gltf.scene;
-        envObjects.position.set(...position);
+        envObjects.position.set(position.x, position.y, position.z);
         setShadow(gltf.scene, true, false);
         scene.add(envObjects);
     });
 
     // Render and animate animated environment
-    let mixer;
-    const updateMixer = (delta) => {
+    let mixer: THREE.AnimationMixer;
+    const updateMixer = (delta: number) => {
         if (mixer) mixer.update(delta);
     };
 
     loader.load(`./assets/${ENVIRONMENT_ANIMATED_ASSET}`, function (gltf) {
         const envAnimated = gltf.scene;
-        envAnimated.position.set(...position);
+        envAnimated.position.set(position.x, position.y, position.z);
         setShadow(gltf.scene, true, false);
 
         // Setup animation mixer and play all animations

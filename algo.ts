@@ -2,18 +2,47 @@
  *	Algorithms for making the city layout
  */
 
-import { BUILDING_TYPES } from "./constants";
+import {
+    BUILDING_TYPES,
+    BuildingType,
+    BuildingTypes,
+    RoadTypes,
+} from "./constants";
+
+export type BadTileType = Record<string, never>;
+export type GrassTileType = {
+    tile: 0;
+};
+export type RoadTileType = {
+    tile: 1;
+    type?: keyof RoadTypes;
+    dir?: number;
+};
+export type BuildingTileType = {
+    tile: 2;
+    type: 0 | 1 | 2;
+    building: BuildingType;
+    dir: number;
+    value: number;
+    mirror?: boolean;
+};
+
+export type TileType =
+    | BadTileType
+    | GrassTileType
+    | RoadTileType
+    | BuildingTileType;
 
 let rowLength = -1;
 let colLength = -1;
 
-let tileTypes = [];
-let seenTiles = [];
+let tileTypes: TileType[][] = [];
+let seenTiles: number[][] = [];
 
-let contribs = [];
+let contribs: number[][] = [];
 
 // Look through contributions and assign tileType and seenTile to all positions
-export function initializeTiles(newContribs) {
+export function initializeTiles(newContribs: number[][]) {
     contribs = newContribs;
     tileTypes = [];
     seenTiles = [];
@@ -26,7 +55,7 @@ export function initializeTiles(newContribs) {
             seenRow.push(0);
             typesRow.push(-1);
         }
-        tileTypes.push(typesRow);
+        tileTypes.push(typesRow as unknown as TileType[]);
         seenTiles.push(seenRow);
     }
 }
@@ -36,31 +65,31 @@ export function getTileTypes() {
 }
 
 export function getSeenTiles() {
-    return seenTiles();
+    return seenTiles;
 }
 
 // Get contributions value for given coordinates
-function getValue(x, y) {
+function getValue(x: number, y: number) {
     return isInBounds(x, y) ? contribs[y][x] : -1;
 }
 
 // Get tile type for given coordinate
-function getType(x, y) {
+function getType(x: number, y: number): TileType {
     return isInBounds(x, y) ? tileTypes[y][x] : {};
 }
 
 // Tell whether the tile at given coordinates was seen
-function getSeen(x, y) {
+function getSeen(x: number, y: number) {
     return isInBounds(x, y) ? seenTiles[y][x] : -1;
 }
 
 /// Determine if given coordinates are within bounds
-function isInBounds(x, y) {
+function isInBounds(x: number, y: number) {
     return x >= 0 && x < rowLength && y >= 0 && y < colLength;
 }
 
 // Determine whether a 2x2 square is formed in any direction from given coordinates
-function is2x2Square(x, y) {
+function is2x2Square(x: number, y: number) {
     for (const i of [-1, 1]) {
         for (const j of [-1, 1]) {
             if (
@@ -78,8 +107,15 @@ function is2x2Square(x, y) {
     return false;
 }
 
+type FindRoadResult = {
+    x: number;
+    y: number;
+    type?: keyof RoadTypes;
+    dir?: number;
+};
+
 // Returns road type with its direction for given coordinates
-function findRoad(x, y) {
+function findRoad(x: number, y: number): FindRoadResult {
     if (getValue(x, y) !== 0 || getType(x, y).tile === 0) {
         return { x, y };
     }
@@ -90,9 +126,11 @@ function findRoad(x, y) {
     const goesLeft = getValue(x - 1, y) === 0 && getType(x - 1, y).tile !== 0;
 
     let roadDir = 0;
-    let roadType = Math.max(
-        [goesUp, goesRight, goesDown, goesLeft].filter((r) => r).length - 2,
-        0,
+    let roadType = <keyof RoadTypes>(
+        Math.max(
+            [goesUp, goesRight, goesDown, goesLeft].filter((r) => r).length - 2,
+            0,
+        )
     );
 
     if (roadType === 0) {
@@ -121,9 +159,25 @@ function findRoad(x, y) {
     return { x, y, type: roadType, dir: roadDir };
 }
 
+type FindBuildingResult = {
+    x: number;
+    y: number;
+    type: keyof BuildingTypes;
+    building: BuildingType;
+    dir: number;
+    mirror: boolean;
+};
+
 // Returns the type, direction and model for the building on given coordinates
-function findBuilding(x, y, val) {
-    const res = { x, y, type: -1, building: {}, dir: -1 };
+function findBuilding(x: number, y: number, val: number): FindBuildingResult {
+    const res: {
+        x: number;
+        y: number;
+        type: number;
+        building: unknown;
+        dir: number;
+        mirror?: boolean;
+    } = { x, y, type: -1, building: {}, dir: -1 };
     const neighborCoords = [];
     seenTiles[y][x] = 1;
 
@@ -182,14 +236,14 @@ function findBuilding(x, y, val) {
 
     // Pick a building model
     if (res.type !== -1) {
-        let types = BUILDING_TYPES[res.type];
+        let types = BUILDING_TYPES[res.type as keyof BuildingTypes];
         types = types.filter((t) => val >= t.min && val <= t.max);
         // let idx = Math.floor(Math.random() * types.length) // Select a random building model
         const idx = (x * y * val) % types.length; // Select a model based on location and height
         res.building = types[idx];
     }
 
-    return res;
+    return res as unknown as FindBuildingResult;
 }
 
 // Start the algorithm - find and set all tile types
@@ -220,7 +274,7 @@ export function findTiles() {
             if (
                 getValue(x, y) === 0 &&
                 getSeen(x, y) === 1 &&
-                getType(x, y) !== 1
+                <unknown>getType(x, y) !== 1
             ) {
                 tileTypes[y][x] = { tile: 0 };
             }

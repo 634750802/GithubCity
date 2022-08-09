@@ -2,7 +2,28 @@
  * Constants for the app
  */
 
-export const BUILDING_TYPES = {
+export type BuildingType = {
+    groundUrl: string;
+    floorUrl?: string;
+    roofUrl?: string;
+    min: number;
+    max: number;
+};
+
+export type BuildingTypes = {
+    0: BuildingType[];
+    1: BuildingType[];
+    2: BuildingType[];
+};
+
+export type RoadTypes = {
+    0: string;
+    1: string;
+    2: string;
+    3: string;
+};
+
+export const BUILDING_TYPES: BuildingTypes = {
     0: [
         {
             groundUrl: "building_1x1_0_g.glb",
@@ -252,7 +273,7 @@ export const BUILDING_TYPES = {
 
 export const FLOOR_HEIGHT = 0.8;
 
-export const ROAD_TYPES = {
+export const ROAD_TYPES: RoadTypes = {
     0: "road0.glb",
     1: "road1.glb",
     2: "road2.glb",
